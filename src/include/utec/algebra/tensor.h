@@ -1,15 +1,10 @@
-#ifndef ALGEBRA_H
-#define ALGEBRA_H
+#ifndef INCLUDE_UTEC_ALGEBRA_TENSOR_H
+#define INCLUDE_UTEC_ALGEBRA_TENSOR_H
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
-#include <functional>
-#include <iostream>
 #include <numeric>
 #include <stdexcept>
-#include <type_traits>
-#include <utility>
 #include <vector>
 
 template <typename T>
@@ -18,7 +13,7 @@ T product(T* begin, T* end) {
 }
 
 namespace utec::algebra {
-    template <typename T, size_t Rank>
+    template <typename T, std::size_t Rank>
     class Tensor {
         std::array<size_t, Rank> m_shape;
         std::array<size_t, Rank> m_steps;
@@ -34,9 +29,6 @@ namespace utec::algebra {
         }
 
     public:
-        Tensor(const Tensor<T, Rank>& other) = default;
-        Tensor(Tensor<T, Rank>&& other) = default;
-
         Tensor(const std::array<size_t, Rank>& shape)
             : m_shape(shape),
               m_data(product(shape.begin(), shape.end())) {
@@ -44,29 +36,38 @@ namespace utec::algebra {
         }
 
         template <typename... Dims>
-        Tensor(Dims... dims)
+        Tensor(const Dims... dims)
             requires(sizeof...(Dims) == Rank)
-            : Tensor(std::array<size_t, Rank>{static_cast<size_t>(dims)...}) {
+            : m_shape{static_cast<size_t>(dims)...},
+              m_data(product(m_shape.begin(), m_shape.end())) {
             update_steps();
         }
 
         template <typename... Idxs>
-        T& operator()(Idxs... idxs)
+        T& operator()(const Idxs... idxs)
             requires(sizeof...(Idxs) == Rank)
         {
-            size_t physical_index = 0;
             size_t i = 0;
-            ((physical_index += m_steps[i++] * idxs), ...);
+            const size_t physical_index =
+                (0 + ... +
+                 (static_cast<size_t>(idxs) < m_shape[i++]
+                      ? m_steps[i] * static_cast<size_t>(idxs)
+                      : throw std::out_of_range("Tensor index out of bounds")));
+
             return m_data[physical_index];
         }
 
         template <typename... Idxs>
-        const T& operator()(Idxs... idxs) const
+        const T& operator()(const Idxs... idxs) const
             requires(sizeof...(Idxs) == Rank)
         {
-            size_t physical_index = 0;
             size_t i = 0;
-            ((physical_index += m_steps[i++] * idxs), ...);
+            const size_t physical_index =
+                (0 + ... +
+                 (static_cast<size_t>(idxs) < m_shape[i++]
+                      ? m_steps[i] * static_cast<size_t>(idxs)
+                      : throw std::out_of_range("Tensor index out of bounds")));
+
             return m_data[physical_index];
         }
 
@@ -87,7 +88,7 @@ namespace utec::algebra {
         }
 
         template <typename... Dims>
-        void reshape(Dims... dims)
+        void reshape(const Dims... dims)
             requires(sizeof...(Dims) == Rank)
         {
             const size_t new_size = (1 * ... * dims);
@@ -126,12 +127,10 @@ namespace utec::algebra {
         }
 
         Tensor<T, Rank> operator*(const T& scalar) const {
-            Tensor<T, Rank> result;
-            result.m_data = this->m_data;
-            result.m_shape = this->m_shape;
+            Tensor<T, Rank> result(m_shape);
 
-            for (auto& value : result.m_data) {
-                value = value * scalar;
+            for (size_t i = 0; i < m_data.size(); i++) {
+                result.m_data[i] = m_data[i] * scalar;
             }
 
             return result;
@@ -145,9 +144,19 @@ namespace utec::algebra {
             return m_data[index];
         }
 
-        // Tensor<T, Rank> transpose_2d()
-        //     requires(Rank == 2)
-        // {}
+        Tensor<T, Rank> transpose_2d() const
+            requires(Rank == 2)
+        {
+            Tensor<T, Rank> result(m_shape[1], m_shape[0]);
+
+            for (size_t i = 0; i < m_shape[0]; i++) {
+                for (size_t j = 0; j < m_shape[1]; j++) {
+                    result(j, i) = (*this)(i, j);
+                }
+            }
+
+            return result;
+        }
     };
 }
 

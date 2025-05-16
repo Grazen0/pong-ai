@@ -1,7 +1,7 @@
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <stdexcept>
-#include "../src/include/utec/algebra/Tensor.h"
+#include "../src/include/utec/algebra/tensor.h"
 
 using utec::algebra::Tensor;
 
