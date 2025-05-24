@@ -1,45 +1,50 @@
 #ifndef INCLUDE_UTEC_ALGEBRA_TENSOR_H
 #define INCLUDE_UTEC_ALGEBRA_TENSOR_H
 
+#include <algorithm>
 #include <array>
-#include <cstddef>
+#include <iterator>
+#include <memory>
 #include <numeric>
 #include <stdexcept>
+#include <tuple>
+#include <utility>
 #include <vector>
 
-template <typename T>
-T product(T* begin, T* end) {
-    return std::accumulate(begin, end, 1, std::multiplies<T>());
+template <typename Container>
+auto product(const Container& cnt) {
+    return std::accumulate(cnt.begin(), cnt.end(), 1,
+                           std::multiplies<typename Container::value_type>());
 }
 
 namespace utec::algebra {
     template <typename T, std::size_t Rank>
     class Tensor {
-        std::array<size_t, Rank> m_shape;
-        std::array<size_t, Rank> m_steps;
+        std::array<std::size_t, Rank> m_shape;
+        std::array<std::size_t, Rank> m_steps;
         std::vector<T> m_data;
 
         void update_steps() {
-            size_t step = 1;
+            std::size_t step = 1;
 
-            for (size_t i = Rank - 1; i != (size_t)-1; i--) {
+            for (std::size_t i = Rank - 1; i != (std::size_t)-1; i--) {
                 m_steps[i] = step;
                 step *= m_shape[i];
             }
         }
 
     public:
-        Tensor(const std::array<size_t, Rank>& shape)
+        Tensor(const std::array<std::size_t, Rank>& shape)
             : m_shape(shape),
-              m_data(product(shape.begin(), shape.end())) {
+              m_data(product(shape)) {
             update_steps();
         }
 
         template <typename... Dims>
         Tensor(const Dims... dims)
             requires(sizeof...(Dims) == Rank)
-            : m_shape{static_cast<size_t>(dims)...},
-              m_data(product(m_shape.begin(), m_shape.end())) {
+            : m_shape{static_cast<std::size_t>(dims)...},
+              m_data(product(m_shape)) {
             update_steps();
         }
 
@@ -47,12 +52,16 @@ namespace utec::algebra {
         T& operator()(const Idxs... idxs)
             requires(sizeof...(Idxs) == Rank)
         {
-            size_t i = 0;
-            const size_t physical_index =
-                (0 + ... +
-                 (static_cast<size_t>(idxs) < m_shape[i++]
-                      ? m_steps[i] * static_cast<size_t>(idxs)
-                      : throw std::out_of_range("Tensor index out of bounds")));
+            std::size_t i = 0;
+            ((static_cast<std::size_t>(idxs) < m_shape[i++]
+                  ? void()
+                  : throw std::out_of_range("Tensor index out of bounds")),
+             ...);
+
+            i = 0;
+            std::size_t physical_index = 0;
+            ((physical_index += m_steps[i++] * static_cast<std::size_t>(idxs)),
+             ...);
 
             return m_data[physical_index];
         }
@@ -61,12 +70,16 @@ namespace utec::algebra {
         const T& operator()(const Idxs... idxs) const
             requires(sizeof...(Idxs) == Rank)
         {
-            size_t i = 0;
-            const size_t physical_index =
-                (0 + ... +
-                 (static_cast<size_t>(idxs) < m_shape[i++]
-                      ? m_steps[i] * static_cast<size_t>(idxs)
-                      : throw std::out_of_range("Tensor index out of bounds")));
+            std::size_t i = 0;
+            ((static_cast<std::size_t>(idxs) < m_shape[i++]
+                  ? void()
+                  : throw std::out_of_range("Tensor index out of bounds")),
+             ...);
+
+            i = 0;
+            std::size_t physical_index = 0;
+            ((physical_index += m_steps[i++] * static_cast<std::size_t>(idxs)),
+             ...);
 
             return m_data[physical_index];
         }
@@ -76,7 +89,8 @@ namespace utec::algebra {
         }
 
         void reshape(const std::array<std::size_t, Rank>& new_shape) {
-            const size_t new_size = product(new_shape.begin(), new_shape.end());
+            const std::size_t new_size =
+                product(new_shape.begin(), new_shape.end());
 
             if (new_size != m_data.size()) {
                 throw std::invalid_argument(
@@ -91,14 +105,14 @@ namespace utec::algebra {
         void reshape(const Dims... dims)
             requires(sizeof...(Dims) == Rank)
         {
-            const size_t new_size = (1 * ... * dims);
+            const std::size_t new_size = (1 * ... * dims);
 
             if (new_size != m_data.size()) {
                 throw std::invalid_argument(
                     "Tensor::reshape() must keep the total number of elements");
             }
 
-            m_shape = {static_cast<size_t>(dims)...};
+            m_shape = {static_cast<std::size_t>(dims)...};
             update_steps();
         }
 
@@ -109,7 +123,7 @@ namespace utec::algebra {
         Tensor<T, Rank> operator+(const Tensor<T, Rank>& other) const {
             Tensor<T, Rank> result{*this};
 
-            for (size_t i = 0; i < result.m_data.size(); i++) {
+            for (std::size_t i = 0; i < result.m_data.size(); i++) {
                 result.m_data[i] = result.m_data[i] + other.m_data[i];
             }
 
@@ -119,7 +133,7 @@ namespace utec::algebra {
         Tensor<T, Rank> operator-(const Tensor<T, Rank>& other) const {
             Tensor<T, Rank> result{*this};
 
-            for (size_t i = 0; i < result.m_data.size(); i++) {
+            for (std::size_t i = 0; i < result.m_data.size(); i++) {
                 result.m_data[i] = result.m_data[i] - other.m_data[i];
             }
 
@@ -129,19 +143,88 @@ namespace utec::algebra {
         Tensor<T, Rank> operator*(const T& scalar) const {
             Tensor<T, Rank> result(m_shape);
 
-            for (size_t i = 0; i < m_data.size(); i++) {
+            for (std::size_t i = 0; i < m_data.size(); i++) {
                 result.m_data[i] = m_data[i] * scalar;
             }
 
             return result;
         }
 
-        T& operator[](const size_t index) {
+        Tensor<T, Rank> operator*(const Tensor<T, Rank>& other) const {
+            if (m_shape == other.m_shape) {
+                // Element-wise multiplication
+                Tensor<T, Rank> result(m_shape);
+                for (std::size_t i = 0; i < m_data.size(); i++) {
+                    result.m_data[i] = m_data[i] * other.m_shape[i];
+                }
+                return result;
+            }
+
+            const bool is_this_smol =
+                std::ranges::find(m_shape, 1) != m_shape.end();
+            const bool is_other_smol =
+                std::ranges::find(other.m_shape, 1) != other.m_shape.end();
+
+            if (!is_this_smol && !is_other_smol) {
+                throw std::invalid_argument("Tensor dimensions do not match");
+            }
+
+            // Broadcast
+            const Tensor<T, Rank>& smol =
+                (is_this_smol && !is_other_smol) ? *this : other;
+            const Tensor<T, Rank>& big =
+                (is_this_smol && !is_other_smol) ? other : *this;
+
+            Tensor<T, Rank> result(big.m_shape);
+
+            std::array<std::size_t, Rank> big_idx{};
+            bool done = false;
+
+            while (!done) {
+                std::array<std::size_t, Rank> smol_idx{big_idx};
+
+                for (std::size_t j = 0; j < Rank; j++) {
+                    smol_idx[j] %= smol.m_shape[j];
+                }
+
+                std::apply(result, big_idx) =
+                    std::apply(big, big_idx) * std::apply(smol, smol_idx);
+
+                // Increment big idx with carries
+                big_idx[0]++;
+                for (std::size_t j = 0; j < Rank; j++) {
+                    if (big_idx[j] < big.m_shape[j]) {
+                        // Carry stops here
+                        break;
+                    }
+
+                    big_idx[j] = 0;
+
+                    if (j < Rank - 1) {
+                        big_idx[j + 1]++;
+                    } else {
+                        done = true;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        T& operator[](const std::size_t index) {
             return m_data[index];
         }
 
-        const T& operator[](const size_t index) const {
+        const T& operator[](const std::size_t index) const {
             return m_data[index];
+        }
+
+        bool operator==(const Tensor<T, Rank>& other) const {
+            return m_shape == other.m_shape && m_data == other.m_data;
+        }
+
+        bool operator!=(const Tensor<T, Rank>& other) const {
+            return !(*this == other);
         }
 
         Tensor<T, Rank> transpose_2d() const
@@ -149,8 +232,8 @@ namespace utec::algebra {
         {
             Tensor<T, Rank> result(m_shape[1], m_shape[0]);
 
-            for (size_t i = 0; i < m_shape[0]; i++) {
-                for (size_t j = 0; j < m_shape[1]; j++) {
+            for (std::size_t i = 0; i < m_shape[0]; i++) {
+                for (std::size_t j = 0; j < m_shape[1]; j++) {
                     result(j, i) = (*this)(i, j);
                 }
             }

@@ -133,6 +133,20 @@ TEST_CASE("2d tensor binary operations", "[tensor]") {
     }
 }
 
+TEST_CASE("2d tensor multiplication", "[tensor]") {
+    Tensor<int, 2> m(2, 1);
+    m(0, 0) = 3;
+    m(1, 0) = 4;
+
+    Tensor<int, 2> n(2, 3);
+    n.fill(5);
+
+    auto p = m * n;
+
+    REQUIRE(p(0, 2) == 15);
+    REQUIRE(p(1, 1) == 20);
+}
+
 TEST_CASE("3d tensor", "[tensor]") {
     Tensor<int, 3> tensor(3, 5, 2);
     tensor[7] = 42;
