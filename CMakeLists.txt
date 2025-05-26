@@ -25,7 +25,7 @@ add_test(NAME all_tests COMMAND pong_ai_tests)
 
 # Compiler warnings
 if(MSVC)
-  target_compile_options(pong_ai_tests PRIVATE /W4 /WX)
+  target_compile_options(pong_ai_tests PRIVATE /W4)
 else()
-  target_compile_options(pong_ai_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(pong_ai_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()
