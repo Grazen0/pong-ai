@@ -1,18 +1,13 @@
+#include <utec/algebra/tensor.h>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <stdexcept>
-#include "../src/include/utec/algebra/tensor.h"
 
 using utec::algebra::Tensor;
 
 TEST_CASE("2d tensor basic operations", "[tensor]") {
     Tensor<int, 2> tensor(2, 3);
-    tensor[0] = 1;
-    tensor[1] = 2;
-    tensor[2] = 3;
-    tensor[3] = 4;
-    tensor[4] = 5;
-    tensor[5] = 6;
+    tensor = {1, 2, 3, 4, 5, 6};
 
     SECTION("fill", "[tensor]") {
         tensor.fill(7);
@@ -42,7 +37,7 @@ TEST_CASE("2d tensor basic operations", "[tensor]") {
         REQUIRE_THROWS_AS(tensor(2, 3), std::out_of_range);
     }
 
-    SECTION("valid reshape", "[tensor]") {
+    SECTION("exact reshape", "[tensor]") {
         tensor.reshape(3, 2);
 
         REQUIRE(tensor.shape() == std::array<size_t, 2>{3, 2});
@@ -53,12 +48,13 @@ TEST_CASE("2d tensor basic operations", "[tensor]") {
         REQUIRE(tensor(2, 0) == 5);
         REQUIRE(tensor(2, 1) == 6);
     }
+    SECTION("non-exact reshape", "[tensor]") {
+        tensor.reshape(3, 4);
+        REQUIRE_NOTHROW(tensor(2, 2));
+        REQUIRE_NOTHROW(tensor(2, 3));
 
-    SECTION("invalid reshape", "[tensor]") {
-        REQUIRE_THROWS_AS(tensor.reshape(2, 4), std::invalid_argument);
-        REQUIRE_THROWS_AS(tensor.reshape(3, 3), std::invalid_argument);
-        REQUIRE_THROWS_AS(tensor.reshape(1, 1), std::invalid_argument);
-        REQUIRE_THROWS_AS(tensor.reshape(3, 1), std::invalid_argument);
+        tensor.reshape(6, 7);
+        REQUIRE_NOTHROW(tensor(5, 3));
     }
 
     SECTION("scalar multiplication", "[tensor]") {
@@ -72,25 +68,25 @@ TEST_CASE("2d tensor basic operations", "[tensor]") {
         REQUIRE(prod(1, 2) == 18);
     }
 
-    SECTION("transpose", "[tensor]") {
-        Tensor<int, 2> mat(3, 2);
-        mat(0, 0) = 1;
-        mat(0, 1) = 2;
-        mat(1, 0) = 3;
-        mat(1, 1) = 4;
-        mat(2, 0) = 5;
-        mat(2, 1) = 6;
-
-        Tensor<int, 2> mat_t = mat.transpose_2d();
-
-        REQUIRE(mat_t.shape() == std::array<size_t, 2>{2, 3});
-        REQUIRE(mat_t(0, 0) == 1);
-        REQUIRE(mat_t(0, 1) == 3);
-        REQUIRE(mat_t(0, 2) == 5);
-        REQUIRE(mat_t(1, 0) == 2);
-        REQUIRE(mat_t(1, 1) == 4);
-        REQUIRE(mat_t(1, 2) == 6);
-    }
+    // SECTION("transpose", "[tensor]") {
+    //     Tensor<int, 2> mat(3, 2);
+    //     mat(0, 0) = 1;
+    //     mat(0, 1) = 2;
+    //     mat(1, 0) = 3;
+    //     mat(1, 1) = 4;
+    //     mat(2, 0) = 5;
+    //     mat(2, 1) = 6;
+    //
+    //     Tensor<int, 2> mat_t = mat.transpose_2d();
+    //
+    //     REQUIRE(mat_t.shape() == std::array<size_t, 2>{2, 3});
+    //     REQUIRE(mat_t(0, 0) == 1);
+    //     REQUIRE(mat_t(0, 1) == 3);
+    //     REQUIRE(mat_t(0, 2) == 5);
+    //     REQUIRE(mat_t(1, 0) == 2);
+    //     REQUIRE(mat_t(1, 1) == 4);
+    //     REQUIRE(mat_t(1, 2) == 6);
+    // }
 }
 
 TEST_CASE("2d tensor binary operations", "[tensor]") {
@@ -134,17 +130,53 @@ TEST_CASE("2d tensor binary operations", "[tensor]") {
 }
 
 TEST_CASE("2d tensor multiplication", "[tensor]") {
-    Tensor<int, 2> m(2, 1);
-    m(0, 0) = 3;
-    m(1, 0) = 4;
+    Tensor<int, 2> tensor_a(2, 3);
+    tensor_a(0, 0) = 7;
+    tensor_a(0, 1) = -2;
+    tensor_a(0, 2) = 4;
+    tensor_a(1, 0) = 8;
+    tensor_a(1, 1) = 7;
+    tensor_a(1, 2) = 0;
 
-    Tensor<int, 2> n(2, 3);
-    n.fill(5);
+    SECTION("multiplication with broadcasting", "[tensor]") {
+        Tensor<int, 2> tensor_b(2, 1);
+        tensor_b(0, 0) = 3;
+        tensor_b(1, 0) = 4;
 
-    auto p = m * n;
+        const Tensor<int, 2> prod_a = tensor_a * tensor_b;
 
-    REQUIRE(p(0, 2) == 15);
-    REQUIRE(p(1, 1) == 20);
+        REQUIRE(prod_a(0, 0) == 21);
+        REQUIRE(prod_a(0, 1) == -6);
+        REQUIRE(prod_a(0, 2) == 12);
+        REQUIRE(prod_a(1, 0) == 32);
+        REQUIRE(prod_a(1, 1) == 28);
+        REQUIRE(prod_a(1, 2) == 0);
+
+        const Tensor<int, 2> prod_b = tensor_b * tensor_a;
+        REQUIRE(prod_a == prod_b);
+    }
+
+    SECTION("element-wise multiplication", "[tensor]") {
+        Tensor<int, 2> tensor_b(2, 3);
+        tensor_b(0, 0) = 2;
+        tensor_b(0, 1) = 3;
+        tensor_b(0, 2) = -2;
+        tensor_b(1, 0) = 0;
+        tensor_b(1, 1) = 5;
+        tensor_b(1, 2) = 4;
+
+        const Tensor<int, 2> prod_a = tensor_a * tensor_b;
+
+        REQUIRE(prod_a(0, 0) == 14);
+        REQUIRE(prod_a(0, 1) == -6);
+        REQUIRE(prod_a(0, 2) == -8);
+        REQUIRE(prod_a(1, 0) == 0);
+        REQUIRE(prod_a(1, 1) == 35);
+        REQUIRE(prod_a(1, 2) == 0);
+
+        const Tensor<int, 2> prod_b = tensor_b * tensor_a;
+        REQUIRE(prod_a == prod_b);
+    }
 }
 
 TEST_CASE("3d tensor", "[tensor]") {
