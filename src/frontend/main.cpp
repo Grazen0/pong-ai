@@ -44,7 +44,7 @@ auto main() -> int {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
-    if (!SDL_CreateWindowAndRenderer("Pong AI", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window,
+    if (!SDL_CreateWindowAndRenderer("Pong AI", WINDOW_SIZE.x, WINDOW_SIZE.y, 0, &window,
                                      &renderer)) {
         std::cerr << "Could not initialize window or renderer: " << SDL_GetError() << '\n';
         return 1;

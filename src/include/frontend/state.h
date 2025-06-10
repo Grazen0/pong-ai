@@ -7,34 +7,32 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include <random>
 #include <set>
-#include "frontend/constants.h"
+#include "utec/algebra/vec2.h"
 
 namespace frontend::state {
     class GameState {
         bool quit = false;
         std::set<SDL_Keycode> keyboard;
-        TTF_Font* display_font;
+        TTF_Font* display_font = nullptr;
 
         std::random_device rd;
         std::mt19937 mt{rd()};
-        std::uniform_real_distribution<double> dist{0.0, 1.0};
+        std::uniform_real_distribution<double> signed_unit_dist{-1.0, 1.0};
 
-        double ball_x = (WINDOW_WIDTH / 2.0) - (BALL_SIZE / 2.0);
-        double ball_y = (WINDOW_HEIGHT / 2.0) - (BALL_SIZE / 2.0);
-        double ball_speed_x = 50;
-        double ball_speed_y = 20;
+        utec::algebra::Vec2<double> ball_position{};
+        utec::algebra::Vec2<double> ball_velocity{};
 
-        double paddle_a_y = (WINDOW_HEIGHT / 2.0) - (PADDLE_HEIGHT / 2.0);
-        double paddle_b_y = (WINDOW_HEIGHT / 2.0) - (PADDLE_HEIGHT / 2.0);
-        int score_a = 0;
-        int score_b = 0;
-
-        [[nodiscard]] auto random() -> double;
+        double paddle_a_y{};
+        double paddle_b_y{};
+        int score_a{};
+        int score_b{};
 
     public:
         explicit GameState(TTF_Font* display_font);
 
         [[nodiscard]] auto get_quit() const -> bool;
+
+        void reset();
 
         void reset_ball();
 
