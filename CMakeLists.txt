@@ -1,16 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 project(pong-ai)
 
-set(font_ttf ${PROJECT_SOURCE_DIR}/res/ComicShannsMono-Regular.ttf)
-set(font_source ${CMAKE_CURRENT_BINARY_DIR}/font_data.c)
-
-add_custom_command(
-  OUTPUT ${font_source}
-  COMMAND ${CMAKE_COMMAND} -E env xxd -i -C -n DISPLAY_FONT_DATA ${font_ttf} >
-          ${font_source}
-  DEPENDS ${font_ttf}
-  COMMENT "Generating font source")
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -30,6 +20,16 @@ endif()
 
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 find_package(SDL3_ttf REQUIRED CONFIG REQUIRED)
+
+set(font_ttf ${PROJECT_SOURCE_DIR}/res/ComicShannsMono-Regular.ttf)
+set(font_source ${CMAKE_CURRENT_BINARY_DIR}/font_data.cpp)
+
+add_custom_command(
+  OUTPUT ${font_source}
+  COMMAND ${CMAKE_COMMAND} -E env xxd -i -C -n DISPLAY_FONT_DATA ${font_ttf} >
+          ${font_source}
+  DEPENDS ${font_ttf}
+  COMMENT "Generating font source")
 
 file(GLOB_RECURSE source_files CONFIGURE_DEPENDS src/*.cpp)
 
