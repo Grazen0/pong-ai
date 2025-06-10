@@ -3,6 +3,7 @@ Checks: >
   -llvmlibc-*,
   -fuchsia-*,
   -altera-*,
+  -bugprone-easily-swappable-parameters,
   -cert-dcl59-cpp,
   -cppcoreguidelines-avoid-magic-numbers,
   -google-build-namespaces,
