@@ -5,6 +5,6 @@ PackConstructorInitializers: Never
 BreakConstructorInitializers: BeforeColon
 AllowShortFunctionsOnASingleLine: Empty
 AlignArrayOfStructures: Right
-FixNamespaceComments: false
 AllowShortEnumsOnASingleLine: false
 NamespaceIndentation: All
+ColumnLimit: 100
